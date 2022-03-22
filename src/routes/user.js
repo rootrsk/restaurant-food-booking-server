@@ -15,8 +15,8 @@ const url = require('url')
 const sendMail = require('../middlewares/mailer')
 // S3 object 
 const s3 = new aws.S3({
-    accessKeyId: 'AKIA3OYGIS7MBPLU7EO2',
-    secretAccessKey: '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',
+    accessKeyId: process.env.S3_KEY,
+    secretAccessKey: process.env.S3_SECRET,
     Bucket: 'rootrskbucket1'
 })
 // Upload Function 
@@ -411,6 +411,16 @@ router.patch('/user/cart',userAuth,async(req,res)=>{
                     }))
                 }
             }
+        }
+        if (operation === 'removeAll') {
+            if (recipieIndex > -1) {
+                await Promise.resolve(cart.items = cart.items.filter((item) => {
+                    return item.recipie.toString() !== recipie_id.toString()
+                }))
+            }
+        }
+        if (operation === 'clear') {
+            cart.items = []
         }
         await cart.save()
         cart = await Cart.findOne({user:req.user._id}).populate('items.recipie')
