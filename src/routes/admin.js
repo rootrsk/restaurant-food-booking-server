@@ -6,7 +6,6 @@ const Order = require('../db/Models/order')
 const Recipie = require('../db/Models/recipie')
 const userAuth = require('./../middlewares/userAuth')
 
-
 const aws = require( 'aws-sdk' );
 const multerS3 = require( 'multer-s3' );
 const multer = require('multer');
@@ -184,6 +183,33 @@ router.get('/admin/cart',userAuth,async(req,res)=>{
         })
     }
 })
+
+// Dashboard Status
+router.get('/admin/dashboard',async(req,res)=>{
+    try {
+        const users = await User.find()
+        const userCounts = await User.countDocuments()
+        const orders = await Order.find()
+        const orderCounts = await Order.countDocuments()
+        const recipies = await Recipie.find()
+        const recipieCounts = await Recipie.countDocuments()
+        res.json({
+            counts:{
+                users:userCounts,
+                orders:orderCounts,
+                recipies:recipieCounts
+            },
+            users,
+            orders,
+            recipies
+        })
+    } catch (error) {
+        res.json({
+            error: error.message,
+            status: 'failed'
+        })
+    }
+})
 /**
  * Routes for recipes 
  */
@@ -219,10 +245,12 @@ router.post('/admin/recipie',async(req,res)=>{
             image: req.body.image
         })
         await recipie.save()
+        const recipies = await Recipie.find({})
         res.json({
             status:'Success',
             message: 'Recipe Created Successfully',
-            recipie
+            recipie,
+            recipies
         })
     } catch (error) {
         res.json({
@@ -247,10 +275,12 @@ router.patch('/admin/recipie', async (req, res) => {
                 error: 'No Such Recipie Found.'
             })
         }
+        const recipies = await Recipie.find({})
         res.json({
             status: 'Success',
             message: 'Recipe Created Successfully',
-            recipie
+            recipie,
+            recipies
         })
     } catch (error) {
         res.json({
@@ -270,15 +300,17 @@ router.delete('/admin/recipie', async (req, res) => {
         }
         const recipie = await Recipie.findByIdAndDelete(req.body._id)
         if (!recipie) {
-            res.json({
+            return res.json({
                 status: 'Failed',
                 error: 'No Such Recipie Found.'
             })
         }
+        const recipies  = await Recipie.find({})
         res.json({
             status: 'Success',
             message: 'Recipe Deleted Successfully',
-            recipie
+            recipie,
+            recipies
         })
     } catch (error) {
         res.json({
