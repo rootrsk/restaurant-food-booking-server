@@ -5,8 +5,9 @@ const Cart = require('../db/Models/cart')
 const Order = require('../db/Models/order')
 const Recipie = require('../db/Models/recipie')
 const userAuth = require('./../middlewares/userAuth')
+const Stripe = require('stripe') 
 
-
+const stripe = Stripe(process.env.STRIPE_PUBLISHER_SECRET)
 const aws = require( 'aws-sdk' );
 const multerS3 = require( 'multer-s3' );
 const multer = require('multer');
@@ -463,4 +464,44 @@ router.post('/user/order',userAuth,async(req,res)=>{
         })
     }
 })
+
+router.get('/user/stripe-order',async(req,res)=>{
+    try {
+        const amount = 20
+        const name = 'Jalebi Bai'
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: Math.round(amount * 100),
+            currency: "INR",
+            payment_method_types: ["card"],
+            metadata: {
+                name
+            },
+        });
+        res.json({
+            paymentIntent,
+            status: 'success'
+        })
+    } catch (error) {
+        
+    }
+})
+// for payment method
+router.post("/user/create-payment-intent", async (req, res) => {
+    try {
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: 100, //lowest denomination of particular currency
+            currency: "inr",
+            payment_method_types: ["card"], //by default
+        });
+
+        const clientSecret = paymentIntent.client_secret;
+
+        res.json({
+            clientSecret: clientSecret,
+        });
+    } catch (e) {
+        console.log(e.message);
+        res.json({ error: e.message });
+    }
+});
 module.exports = router
