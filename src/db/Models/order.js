@@ -1,9 +1,7 @@
 const mongoose = require('mongoose')
 const OrderSchema = mongoose.Schema({
     user: {
-        type: mongoose.Types.ObjectId,
-        trim: true,
-        ref: 'User'
+        type:String,
     },
     items: [{
         name: {
@@ -19,7 +17,7 @@ const OrderSchema = mongoose.Schema({
     status:{
         type:String,
     },
-    amount:{
+    total_amount:{
         type: Number
     },
     payment_status:{
@@ -28,7 +26,7 @@ const OrderSchema = mongoose.Schema({
     payment_mode: {
         type: String
     },
-    seat:{
+    seats:{
         type: Number
     }
 

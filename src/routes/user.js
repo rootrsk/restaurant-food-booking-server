@@ -6,7 +6,7 @@ const Order = require('../db/Models/order')
 const Recipie = require('../db/Models/recipie')
 const userAuth = require('./../middlewares/userAuth')
 const Stripe = require('stripe') 
-
+const jwt = require('jsonwebtoken')
 const stripe = Stripe(process.env.STRIPE_PUBLISHER_SECRET)
 const aws = require( 'aws-sdk' );
 const multerS3 = require( 'multer-s3' );
@@ -451,11 +451,21 @@ router.post('/user/order',userAuth,async(req,res)=>{
                 count: item.count
             })
         })
+        const order_token = jwt.sign({
+            items,
+            total_amount,
+            seats:seats || 1
+        }, process.env.JWT_SECRET)
+        const user_token = jwt.sign({
+            user: req.user
+        }, process.env.JWT_SECRET)
         res.json({
             status:'Success',
             total_amount,
             items,
-            seats:seats||1
+            seats:seats ||1,
+            order_token,
+            user_token
         })
     } catch (error) {
         res.json({
@@ -465,43 +475,111 @@ router.post('/user/order',userAuth,async(req,res)=>{
     }
 })
 
-router.get('/user/stripe-order',async(req,res)=>{
+
+// for payment method
+const key_id = 'rzp_test_Z9nxuWlBaBkpo2'
+const Razorpay = require('razorpay')
+const razorpay = new Razorpay({
+    key_id: 'rzp_test_Z9nxuWlBaBkpo2',
+    key_secret: 'OimjxfiU6JoO9YC3z4TmR5mC'
+})
+const queryString =require('query-string')
+const OrderToken = require('../db/Models/tempOrder')
+router.post('/user/razorpay-order',async(req,res)=>{
+    console.log(req.body)
+    console.log(req.body.asPath)
+    const body = req.body.asPath
+    if (!body){
+        return res.json({
+            error:'something went wrong'
+        })
+    }
+    const query = queryString.parse(body)
+    const user_token = query.user_token
+    const order_token = query['/payment?order_token']
     try {
-        const amount = 20
-        const name = 'Jalebi Bai'
-        const paymentIntent = await stripe.paymentIntents.create({
-            amount: Math.round(amount * 100),
-            currency: "INR",
-            payment_method_types: ["card"],
-            metadata: {
-                name
-            },
-        });
+        const user = jwt.verify(user_token,process.env.JWT_SECRET)
+        const order_details = jwt.verify(order_token,process.env.JWT_SECRET)
+        console.log(user)
+        if(!user || !order_details){
+            return res.json({
+                error: 'Something went wrong.'
+            })
+        }
+        console.log(order_details)
+        const options = {
+            amount: 100 * order_details.total_amount,
+            currency: 'INR',
+            receipt: Math.random()*10000,
+            payment_capture:1,
+        }
+        const prefill = {
+            email:"rootrsk@gmail.com",
+            contact: '6201004131',
+            name : 'rootrsk'
+        }
+        const temp_order = new OrderToken({
+            user_token,
+            order_token,
+            user_id: user._id
+        })
+        await temp_order.save()
+        const order = await razorpay.orders.create(options)
+        order.key= key_id
+        order.prefill = prefill
+        order.notes = [temp_order._id]
+        
         res.json({
-            paymentIntent,
-            status: 'success'
+            order
         })
     } catch (error) {
-        
+        res.json({
+            error:error.message,
+            status:'failed'
+        })
     }
 })
-// for payment method
-router.post("/user/create-payment-intent", async (req, res) => {
+
+router.post('/verify-payment',async(req,res)=>{
     try {
-        const paymentIntent = await stripe.paymentIntents.create({
-            amount: 100, //lowest denomination of particular currency
-            currency: "inr",
-            payment_method_types: ["card"], //by default
-        });
+        console.log(req.body)
+        console.log('afetr boay')
+        const temp_id =req.body.payload.payment.entity.notes[0]
+        const temp_order = await OrderToken.findById(temp_id)
+        const user = jwt.verify(temp_order.user_token, process.env.JWT_SECRET)
+        const order = jwt.verify(temp_order.order_token, process.env.JWT_SECRET)
+        console.log(user,order)
 
-        const clientSecret = paymentIntent.client_secret;
-
+        const final_order = new Order({
+            ...order,
+            payment_status:'Success',
+            payment_mode: req.body.payload.payment.entity.method,
+            status:"booked",
+            user:user.user._id
+        })
+        await final_order.save()
         res.json({
-            clientSecret: clientSecret,
-        });
-    } catch (e) {
-        console.log(e.message);
-        res.json({ error: e.message });
+            final_order,
+            status:'success'
+        })
+    } catch (error) {
+        console.log(error)
+        res.json({
+            error:error.message,
+            
+        })
     }
-});
+})
+router.get('/user/orders',userAuth,async(req,res)=>{
+    try {
+        const orders = await Order.find({user:req.user._id})
+        res.json({
+            orders
+        })
+    } catch (error) {
+        res.json({
+            error:error.message
+        })
+    }
+})
 module.exports = router
