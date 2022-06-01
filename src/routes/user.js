@@ -479,8 +479,8 @@ router.post('/user/order',userAuth,async(req,res)=>{
 // for payment method
 const Razorpay = require('razorpay')
 const razorpay = new Razorpay({
-    key_id: prcoess.env.RAZORPAY_KEY_ID,
-    key_secret: prcoess.env.RAZORPAY_SECRET_KEY
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_SECRET_KEY
 })
 const queryString =require('query-string')
 const OrderToken = require('../db/Models/tempOrder')
@@ -524,7 +524,7 @@ router.post('/user/razorpay-order',async(req,res)=>{
         })
         await temp_order.save()
         const order = await razorpay.orders.create(options)
-        order.key = prcoess.env.RAZORPAY_KEY_ID
+        order.key = process.env.RAZORPAY_KEY_ID
         order.prefill = prefill
         order.notes = [temp_order._id]
         
