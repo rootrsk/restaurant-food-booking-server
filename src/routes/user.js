@@ -477,11 +477,10 @@ router.post('/user/order',userAuth,async(req,res)=>{
 
 
 // for payment method
-const key_id = 'rzp_test_Z9nxuWlBaBkpo2'
 const Razorpay = require('razorpay')
 const razorpay = new Razorpay({
-    key_id: 'rzp_test_Z9nxuWlBaBkpo2',
-    key_secret: 'OimjxfiU6JoO9YC3z4TmR5mC'
+    key_id: prcoess.env.RAZORPAY_KEY_ID,
+    key_secret: prcoess.env.RAZORPAY_SECRET_KEY
 })
 const queryString =require('query-string')
 const OrderToken = require('../db/Models/tempOrder')
@@ -572,7 +571,7 @@ router.post('/verify-payment',async(req,res)=>{
 })
 router.get('/user/orders',userAuth,async(req,res)=>{
     try {
-        const orders = await Order.find({user:req.user._id})
+        const orders = await Order.find({user:req.user._id}).sort({_id: -1})
         res.json({
             orders
         })

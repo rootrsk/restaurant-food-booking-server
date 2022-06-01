@@ -34,7 +34,7 @@ const userSchema = mongoose.Schema({
     profile:{
         avatar:{
             type: String,
-            default: 'https://i.ibb.co/2Wnc5cG/Group-8.png'
+            default: 'https://i.ibb.co/5MGGG2X/food-Ginie.png'
         },
         key: {
             type: String,
