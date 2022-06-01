@@ -524,7 +524,7 @@ router.post('/user/razorpay-order',async(req,res)=>{
         })
         await temp_order.save()
         const order = await razorpay.orders.create(options)
-        order.key= key_id
+        order.key = prcoess.env.RAZORPAY_KEY_ID
         order.prefill = prefill
         order.notes = [temp_order._id]
         
